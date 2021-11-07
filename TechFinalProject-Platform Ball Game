@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Platforming ball game, Inspired by doodle jump</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
+<link href='https://fonts.googleapis.com/css?family=Black And White Picture' rel='stylesheet'>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+  body {
+    background-color: #e6e2cc;
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 30px;
+  }
+
+
+    
+  h1 {
+  font-size: 55px;
+  font-family: 'Nanum Pen Script', cursive;font-size: 45px;
+      text-shadow: -2px 0 #bfcdf5, 0 2px #bfcdf5, 2px 0 #bfcdf5, 0 -2px #bfcdf5;
+  
+  }
+  
+  button {
+  }
+  
+  canvas { 
+	position: absolute; 
+	width: 600px; 
+	height: 400px; 
+	left: 50%; 
+	top: 50%; 
+	margin-left: -200px; /* This is half the width */ 
+	margin-top: -215px; /* This is half the height */ 
+} 
+
+
+</style>
+<script src="library.js"></script>
+<script>
+//const GRAVITY = -0.6;
+var GRAVITY = 0;// after testing, using it as a var is easier to set some type of start button related thing.
+var highScore = 0; //I'm planning on setting some type of high score thing
+var player;
+var points;
+var sec = 35;//This is for my timer
+var time = setInterval(myTimer, 1000);
+var gameStarted;
+var gameEnded;
+var gameRestarted;
+var platforms = [];
+
+function setup() {
+
+  createCanvas(400, 600);
+
+  player = new Doodler(width / 2, height / 2, false, 30, color("#f6a6ff"));
+
+  platforms = generatePlatforms(); 
+
+  points = 0;
+
+  frameRate(60); //Not so sure as to why I have this written but I heard that it helps with the glitchiness of the game
+  gameStarted = false;
+  gameEnded = false;
+  gameRestarted = false;
+}
+
+
+
+function draw() {
+  background(51);
+
+  handlePlayer();
+
+  handlePlatforms();
+
+	drawScore();
+
+  handleKeys();
+  
+  if(gameStarted == true) {  
+ }
+ else {
+    // Start menu
+    fill("#6887a6");
+    textSize(60);
+    text("Start", 140, 275);
+  }
+}
+
+function moveScreen() {
+  if(doodlerY < 250) {
+    platYChange = 3;
+    doodlerVelocity += 0.25;
+  } else {
+    platYChange = 0;
+  }
+}
+
+// Start Game
+function mousePressed() {
+  if(gameStarted == false) {
+    score = 0;
+    doodlerVelocity = 0;
+    gameStarted = true;
+    GRAVITY = -0.6;
+    points = 0;
+  }
+  if (gameEnded == true) {
+    gameRestarted = true;
+    points = 0;
+  }
+}
+
+function handlePlayer() {
+
+	player.update();
+  player.draw();
+
+if (gameEnded == true) {
+  endGame();
+  if (gameRestarted == true) {
+       player = new Doodler(width / 2, height / 2, false, 30, color("#f6a6ff"));
+       platforms = generatePlatforms();
+       gameEnded = false;
+       gameRestarted = false;
+    }
+} else {
+  if (player.maxAltitude + player.location.y < -height / 2) {
+    endGame();
+    if (gameRestarted == true) {
+       player = new Doodler(width / 2, height / 2, false, 30, color("#f6a6ff"));
+       platforms = generatePlatforms();
+       gameEnded = false;
+       gameRestarted = false;
+    }
+  } 
+}
+}
+
+function handlePlatforms() {
+
+  for (var i = platforms.length - 1; i >= 0; i--) {
+
+    if (platforms[i].onScreen) {
+
+      platforms[i].draw(player.location.y);
+
+			if (platforms[i] instanceof Doodler)
+				platforms[i].update(); // update Doodlers
+
+      if (platforms[i].collidesWith(player)) {
+
+        player.jump();
+        if (platforms[i] instanceof Doodler) {
+					// it's not a platform, but a doodler
+
+          points += 100;
+          platforms.splice(i, 1); 
+        }
+      }
+    } else {
+
+      platforms.splice(i, 1);
+
+			/* pushes new platform */
+      var x = noise(player.maxAltitude, frameCount) * width;
+      var y = player.maxAltitude + height;
+
+      if (random() < 0.9) {
+				// it has a 90% chance of being a regular platform#a6f9ff
+        platforms.push(new Platform(x, y, 55, color("#a6f9ff")));
+      } else {
+
+        if (random() > 0.5) {
+					// 5% chance of being a doodler
+					platforms.push(new Doodler(x, y, true, 50, color("#a3987a")));
+				}
+
+      }
+    }
+  }
+}
+
+function generatePlatforms() {
+
+	var field = []; 
+
+	for (var y = 0; y < height * 2; y += 40) {
+
+
+    for (var i = 0; i < 3; i++) { 
+
+      var x = noise(i, y) * width;
+
+      if (noise(y, i) > 0.5) 
+        field.push(new Platform(x, y, 55, color("#7dc6c7")));
+    }
+  }
+
+	return field;
+}
+
+
+function handleKeys() {
+if (gameEnded == false) {
+  if (keyIsDown(LEFT_ARROW)) {
+
+    player.applyForce(-1, 0);
+  } else if (keyIsDown(RIGHT_ARROW)) {
+
+    player.applyForce(1, 0);
+    }
+  }
+}
+
+
+function drawScore() {
+
+  textSize(30);
+  textAlign(LEFT);
+  fill(255);
+  noStroke();
+  text((player.maxAltitude + points).toFixed(0), 50, 50);
+}
+
+function Doodler(x, altitude, enemy, size, color) {
+
+  this.location = createVector(x, altitude);
+  this.velocity = createVector(0, 0);
+
+  this.maxAltitude = altitude; 
+  this.premaxAltitude = altitude; 
+
+  this.force = 12;
+
+  this.color = color;
+  this.size = size;
+
+  this.enemy = enemy; // enemy or not
+
+	this.drone = 0; // enemy Doodlers drone across the screen
+
+  this.onScreen = true;
+}
+
+/**
+ * changes location based upon velocity
+ * moves enemy Doodlers across the screen
+ */
+Doodler.prototype.update = function() {
+
+  if (this.enemy) {
+		// drone across the screen
+
+		this.drone += map(this.maxAltitude, 0, 15000, 0.0001, 0.1);
+    this.location.x = (Math.sin(this.drone) * (width / 2)) + width / 2;
+  } else {
+		/* change locationation based upon velocityocationity and add air resistance */
+    this.location.add(this.velocity);
+    this.velocity.x *= 0.8;
+
+		// apply GRAVITY
+	  player.applyForce(createVector(0, GRAVITY));
+
+		// update maximum altitude
+    this.maxAltitude = (this.location.y > this.maxAltitude) ? this.location.y : this.maxAltitude;
+  }
+
+};
+
+/**
+ * this velocityocationity thing it set to mimic a hop
+ */
+Doodler.prototype.jump = function() {
+
+  this.velocity.y *= 0;
+
+  if (this.premaxAltitude == this.maxAltitude) {
+		// stronger hop as the altitude remains constant
+
+    this.force = constrain(this.force + 1, 12, 16);
+  } else {
+
+    this.force = 12;
+  }
+
+  this.applyForce(createVector(0, this.force));
+
+  this.premaxAltitude = this.maxAltitude;
+};
+
+/**
+ * adds force to the velocityocationity
+ */
+Doodler.prototype.applyForce = function(force) {
+
+  this.velocity.add(force);
+};
+
+/**
+ * returns whether or not the doodler collides with another doodler
+ */
+Doodler.prototype.collidesWith = function(doodler) {
+
+  var distance = dist(doodler.location.x, doodler.location.y, this.location.x, this.location.y);
+
+  if (distance < (this.size / 2 + doodler.size / 2)) {
+		// distance is greater than radii combined
+
+    if (doodler.location.y < this.location.y) {
+			// underneath doodler
+      endGame();
+      gameEnded = true;
+      this.force = 0;
+      Object.freeze(points)
+      Object.freeze(player)
+      return false;
+    } else {
+ 
+      }
+
+      noStroke();
+      return true;
+    }
+
+};
+
+Doodler.prototype.draw = function(altitude) {
+
+  stroke(255);
+  strokeWeight(3);
+  fill(this.color);
+
+  if (this.enemy) {
+
+    if (altitude - this.location.y < height) {
+
+
+      ellipse(this.location.x, altitude - this.location.y + height / 2, this.size);
+    } else {
+      this.onScreen = false;
+    }
+  } else {
+
+
+    ellipse(this.location.x, height / 2, this.size);
+  }
+
+};
+
+function Platform(x, altitude, size, color) {
+
+  this.x = x;
+  this.altitude = altitude;
+
+  this.size = size;
+  this.color = color;
+
+  this.onScreen = true;
+}
+
+Platform.prototype.draw = function(altitude) {
+
+  stroke(255);
+  strokeWeight(3);
+  fill(this.color);
+
+  if (altitude - this.altitude < height / 2) {
+
+    rect(this.x, (altitude - this.altitude + height / 2) , this.size, 15);
+  } else {
+    this.onScreen = false;
+  }
+};
+
+Platform.prototype.collidesWith = function(doodler) {
+
+  var platformTop = this.altitude;
+  var doodlerBottom = doodler.location.y - doodler.size / 2 ;
+
+  stroke("#ff6200");
+  strokeWeight(10);
+
+  if (Math.abs(platformTop - doodlerBottom) < -doodler.velocity.y && platformTop < doodlerBottom) {
+
+    var platformLeftX = this.x;
+    var platformRightX = this.x + this.size; 
+    var doodlerLeftX = doodler.location.x - doodler.size / 2; 
+    var doodlerRightX = doodler.location.x + doodler.size / 2;
+    return ((doodlerLeftX >= platformLeftX && 
+			doodlerLeftX <= platformRightX) ||
+			(doodlerRightX >= platformLeftX && 
+			doodlerRightX <= platformRightX));
+  }
+
+  return false;
+};
+
+function endGame() {
+  textAlign(CENTER);
+  textSize(65);
+  noStroke();
+  fill("#f0806c");
+  text("Game Over!", width / 2, height / 3);
+  //noLoop();
+  textSize(40);
+  fill("#ebff6b");
+  text("Restart", width / 2, height / 2);
+  gameEnded = true;
+}
+
+function myTimer() {
+  document.getElementById('timer').innerHTML = sec + "sec left";
+  if (gameEnded == true) {
+    sec=35;
+  } else {
+     if (gameStarted == true) {
+        sec--;
+     }
+  }
+  if (sec == -1) {
+      //clearInterval(time);
+      //alert("Time out! :(");
+      endGame();
+      sec=35;
+      //noLoop();
+  }
+}
+
+</script>
+</head>
+
+<body>
+<center><h1>Platforming Ball Game</h1></center>
+<center>
+Time: <span id = "timer">35 seconds</span><br>
+</center>
+</body>
+
+</html>
